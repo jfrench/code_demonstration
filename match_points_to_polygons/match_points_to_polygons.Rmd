@@ -15,7 +15,11 @@ library(sf) # needed for spatial analysis
 
 
 # read multipolygon object
-co_zcta <- st_read("/data/co_zcta/Colorado_ZIP_Code_Tabulation_Areas_ZCTA.shp")
+co_zcta <- st_read("Colorado_ZIP_Code_Tabulation_Areas_ZCTA.shp")
+~/OneDrive - The University of Colorado Denver/GitHub/code_demonstration/data/co_zcta
+```
+
+```{r}
 plot(st_geometry(co_zcta))
 # read data frame
 co_points <- read.csv("./data/usgs_data_series_520_clean.csv")
