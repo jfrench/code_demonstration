@@ -1,0 +1,102 @@
+---
+  title: "Determining neighbors from a shapefile"
+output:
+  pdf_document: default
+html_document: default
+---
+
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, root.dir = "C:/Users/frencjos/Documents/OneDrive - The University of Colorado Denver/GitHub/code_demonstration/neighbors_from_shapefile")
+```
+
+This document demonstrates approaches for determining the neighbors of (multi)polygons imported from a shapefile. The process relies heavily on the **sf** package (Pebesma, 2018) and the **spdep** package (Bivand and Wong, 2018)
+
+Specifically, we will determine which of the contiguous states (plus the District of Columbia) in the United States are neighbors.
+
+The materials for this demonstration are available at [https://github.com/jfrench/code_demonstration/tree/main/neighbors_from_shapefile]
+
+Interested parties will need to:
+
+* Install and load the **sf** package.
+* Install and load the **spdep** package.
+* Unzip `cb_2018_us_state_20m.zip` into their current working directory. I assume the zip file is then unzipped into the `cb_2018_us_state_20m` folder.
+
+```{r, include=FALSE}
+library(sf)
+library(spdep)
+```
+
+```{r, eval = FALSE}
+library(sf) # needed for spatial analysis
+library(spdep)
+# download csv file to working directly
+download.file("https://raw.githubusercontent.com/jfrench/code_demonstration/main/match_points_to_polygons/usgs_data_series_520_clean.csv",
+              destfile = "usgs_data_series_520_clean.csv")
+# download zip file to working directly
+download.file("https://github.com/jfrench/code_demonstration/raw/main/match_points_to_polygons/co_zcta.zip",
+              "co_zcta.zip")
+# unzip co_zcta.zip into working directory
+unzip("co_zcta.zip")
+```
+
+First, we use `sf::st_read` to import the shapefile describing the state borders. The `sf::st_read` function will import the shapefile as an `sf` object with `MULTIPOLYGON` geometry type. We assign the name `us_states` to this object.
+
+```{r}
+# read multipolygon object
+us_states <- st_read("./cb_2018_us_state_20m/cb_2018_us_state_20m.shp")
+```
+Since we're only interested in the contiguous 48 states (and the District of Columbia so there are no "holes" in our map), we drop rows of `us_states` for Alaska, Hawaii, and Puerto Rico. We use the native pipe operator, `|>`, to pipe `us_states` into the first argument of the `subset` function, from which we keep only the rows for which `NAME` differs from Alaska, Hawaii, and Puerto Rico.
+
+```{r}
+us_states <- us_states |> 
+  subset(!is.element(NAME, c("Alaska", "Hawaii", "Puerto Rico")))
+```
+
+We first now visualize the contiguous `us_states` by using the `sf::st_geometry` function to extract its
+geometry object and then plot it using the `plot` function.
+
+```{r, eval=FALSE}
+plot(st_geometry(us_states))
+```
+
+There are many ways to determine which geometrys neighbor each other. The most common ways to define neighborhood relationships are based on whether they share a border, are within a certain distance, or are among the `k` nearest neigbors. We discuss each one in turn. To simplify the analysis, we utilize the **spdep** package. The **spdep** package makes it easy to plot the neighbor relationships and also to test for things like spatial dependence in the data.
+
+## Neighbors that share a border
+
+The `spdep::poly_nb` function can be used to determine which multipolygon each multipolygon touches.
+
+```{r}
+(nb_sf <- spdep::poly2nb(us_states))
+```
+
+
+The results are returned as a list and assigned the name `nb_list`. Looking at the printed results for the first two multipolygons, we see that the first multipolgyon touches multipolgyon 3, 5, 18, 35, and 45. Similarly, the second multipolygon touches multipolygon 6, 15, 17, 25, 27, 42.
+
+To determine which multipolygons are neighbors, we can use the `sf::st_touches` function. It will determine which geometries each geometry touches. In this case, it will determine which multipolygons each multipolgon touches. The results are returned as a list and assigned the name `nb_list`. Looking at the printed results for the first two multipolygons, we see that the first multipolgyon touches multipolgyon 3, 5, 18, 35, and 45. Similarly, the second multipolygon touches multipolygon 6, 15, 17, 25, 27, 42.
+
+```{r}
+# determine the multipolygon each multipolygon touches
+nb_list <- st_touches(us_states)
+# return first two results
+nb_list[1:2]
+```
+
+Note: the `sf::st_intersects` function is similar to `sf::st_touches`, but lets a geometry be a neighbor with itself. Notice, the the first multipolygon is now a neighbor with itself when using `sf::st_intersects`.
+
+```{r}
+st_intersects(us_states)[1]
+```
+
+It's always a good idea to plot the neighbor relationships to check whether the results are sensible. Sometimes, the neighborhood relationships need to be adjusted manually (e.g., because of islands, physical obstructions, etc.).
+
+```{r}
+plot(nb_list, st_centroid(st_geometry(us_states)))
+```
+
+## References
+
+Bivand, Roger S. and Wong, David W. S. (2018)
+Comparing implementations of global and local
+indicators of spatial association TEST,
+27(3), 716-748. [https://doi.org/10.1007/s11749-018-0599-x]
+
