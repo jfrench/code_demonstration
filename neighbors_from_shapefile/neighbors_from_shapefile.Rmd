@@ -1,6 +1,8 @@
 ---
 title: "Determining neighbors from a shapefile"
+author: Joshua French
 output:
+  github_document: default
   pdf_document: default
   html_document: default
 ---
@@ -8,6 +10,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, root.dir = "C:/Users/frencjos/Documents/OneDrive - The University of Colorado Denver/GitHub/code_demonstration/neighbors_from_shapefile")
 ```
+
+## Introduction
 
 This document demonstrates approaches for determining the neighbors of (multi)polygons imported from a shapefile. The process relies heavily on the **sf** package (Pebesma, 2018) and the **spdep** package (Bivand and Wong, 2018).
 
